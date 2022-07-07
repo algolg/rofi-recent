@@ -1,15 +1,15 @@
 // Copyright 2022 System76 <info@system76.com>
 // SPDX-License-Identifier: MPL-2.0
 
-// Parse the `~/.local/share/recently-used.xbel` file
-//
-// ```
-// let recently_used = match recently_used_xbel::parse_file()?;
-//
-// for bookmark in recently_used.bookmarks {
-//     println!("{:?}", bookmark);
-// }
-// ```
+/* 
+ * This is a modified version of System76's recently-used-xbel package.
+ *
+ * This modification makes it possible to parse recently-used.xbel 
+ * for more parameters than only those found in the original release.
+ *
+ * The original source can be found at 
+ * https://github.com/pop-os/recently-used-xbel.
+ */
 
 use serde::Deserialize;
 use std::path::PathBuf;

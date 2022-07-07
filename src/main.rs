@@ -1,3 +1,4 @@
+use fork::{daemon, Fork};
 use linked_hash_map::LinkedHashMap;
 use regex::Regex;
 use std::env;
@@ -71,10 +72,15 @@ fn printer(files: LinkedHashMap<String, Vec<File>>) -> () {
 
 // opens the chosen file
 fn run(files: LinkedHashMap<String, Vec<File>>, choice: String) -> () {
-    let cmd = choice.split_whitespace().next().unwrap_or(""); // the first part of choice, which contains the program command
-    let short_path: String = choice[(cmd.chars().count() + 1)..].to_string(); // the rest of the choice, which contains the file name
-    let file_vec = files.get(cmd).unwrap(); // variable cmd is used to find the vector of files from the LinkedHashMap
-    let mut path: Option<&str> = None; // the path variable will store the full path to the file
+    // the first part of choice, which contains the program command
+    let cmd = choice.split_whitespace().next().unwrap_or("");
+    let short_path: String = choice[(cmd.chars().count() + 1)..].to_string();
+    // the rest of the choice, which contains the file name
+    let file_vec = files.get(cmd).unwrap();
+    // variable cmd is used to find the vector of files from the LinkedHashMap
+    let mut path: Option<&str> = None;
+    // the path variable will store the full path to the file
+
     // compares each file in file_vec with the short_path to look for a match
     for file in file_vec {
         if file.path.contains(&short_path) {
@@ -82,13 +88,15 @@ fn run(files: LinkedHashMap<String, Vec<File>>, choice: String) -> () {
             break;
         }
     }
+
     // if path has a value, a command is executed to open the file
     if let Some(_value) = path {
-        let output = Command::new(cmd)
-            .arg(path.unwrap())
-            .output()
-            .expect("no such file or directory");
-        println!("{:?}", output);
+        if let Ok(Fork::Child) = daemon(false, false) {
+            Command::new(cmd)
+                .arg(path.unwrap())
+                .output()
+                .expect("no such file or directory");
+        }
     } else {
         println!("error: no path");
     }
