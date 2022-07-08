@@ -8,6 +8,9 @@ use urlencoding::decode;
 
 mod recently_used_xbel;
 
+// setting this to false will remove the limit on the number of files per program
+const LIMIT: bool = true;
+// changing this value will change the limit on the number of files per program
 const NUM_OF_FILES: usize = 5;
 
 struct File {
@@ -56,7 +59,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             // adds Files as values to the LinkedHashMap if there are still spaces remaining
-            if files.get(cmd).unwrap().len() < NUM_OF_FILES && !exists {
+            if (!LIMIT || files.get(cmd).unwrap().len() < NUM_OF_FILES) && !exists {
                 let ele = File {
                     path: decode(&bookmark.href)?.to_string(),
                     output: format!(
@@ -98,12 +101,12 @@ fn printer(files: LinkedHashMap<String, Vec<File>>) {
 fn run(files: LinkedHashMap<String, Vec<File>>, choice: String) {
     // the first part of choice, which contains the program command
     let cmd = choice.split_whitespace().next().unwrap_or("");
-    let short_path: String = choice[(cmd.chars().count() + 1)..].to_string();
     // the rest of the choice, which contains the file name
-    let file_vec = files.get(cmd).unwrap();
+    let short_path: String = choice[(cmd.chars().count() + 1)..].to_string();
     // variable cmd is used to find the vector of files from the LinkedHashMap
-    let mut path: Option<&str> = None;
+    let file_vec = files.get(cmd).unwrap();
     // the path variable will store the full path to the file
+    let mut path: Option<&str> = None;
 
     // compares each file in file_vec with the short_path to look for a match
     for file in file_vec {
@@ -118,7 +121,9 @@ fn run(files: LinkedHashMap<String, Vec<File>>, choice: String) {
         Some(value) => {
             if let Ok(Fork::Child) = daemon(false, false) {
                 Command::new(cmd)
-                    .arg(value)
+                    .arg(
+                        format!("{}", value.split("file://").nth(1).unwrap())
+                    )
                     .output()
                     .expect("no such file or directory");
             }
