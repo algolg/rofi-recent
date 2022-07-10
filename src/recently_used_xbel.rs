@@ -27,6 +27,8 @@ pub struct RecentlyUsed {
 pub struct Bookmark {
     // The location of the file.
     pub href: String,
+    // The time the file was last modified
+    pub modified: String,
     // Info element.
     #[serde(rename = "info")]
     pub info: Info,

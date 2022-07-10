@@ -1,6 +1,7 @@
 use std::env;
 use std::process::Command;
 
+use chrono::{DateTime, FixedOffset};
 use fork::{daemon, Fork};
 use linked_hash_map::LinkedHashMap;
 use regex::Regex;
@@ -16,6 +17,7 @@ const NUM_OF_FILES: usize = 5;
 struct File {
     path: String,
     output: String,
+    date: DateTime::<FixedOffset>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -34,6 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // create a HashMap to store file names
     let mut files = LinkedHashMap::<String, Vec<File>>::new();
     // iterates through the bookmarks
+    let mut cmds = Vec::<String>::new();
     for bookmark in rev_bookmarks {
         for app in bookmark.info.metadata.app_parent.apps.iter() {
             // uses Regex to find the command without parameters
@@ -48,6 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut exists = false;
             // adds the command as a key to the LinkedHashMap if it doesn't already exist
             if !files.contains_key(cmd) {
+                cmds.push(cmd.to_string());
                 files.insert(cmd.to_string(), Vec::new());
             } else {
                 for v in files.get_mut(cmd).unwrap() {
@@ -59,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             // adds Files as values to the LinkedHashMap if there are still spaces remaining
-            if (!LIMIT || files.get(cmd).unwrap().len() < NUM_OF_FILES) && !exists {
+            if !exists {
                 let ele = File {
                     path: decode(&bookmark.href)?.to_string(),
                     output: format!(
@@ -72,9 +76,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         app.name,
                         app.exec
                     ),
+                    date: DateTime::parse_from_rfc3339(&bookmark.modified).unwrap(),
                 };
                 files.get_mut(cmd).unwrap().push(ele);
             }
+        }
+    }
+    for cmd in cmds {
+        files.get_mut(&cmd).unwrap().sort_by(|a, b| b.date.cmp(&a.date));
+        if LIMIT {
+            files.get_mut(&cmd).unwrap().truncate(NUM_OF_FILES);
         }
     }
     // without any args, the program will use the LinkedHashMap to print a list
