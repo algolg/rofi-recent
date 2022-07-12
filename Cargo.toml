@@ -7,7 +7,6 @@ repository = "https://github.com/algolg/rofi-recent"
 license = "MIT"
 
 [dependencies]
-chrono = "0.4"
 dirs = "4.0.0"
 fork = "0.1.19"
 linked-hash-map = "0.5.4"

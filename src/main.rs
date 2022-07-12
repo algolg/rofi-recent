@@ -1,7 +1,6 @@
 use std::env;
 use std::process::Command;
 
-use chrono::{DateTime, FixedOffset};
 use fork::{daemon, Fork};
 use linked_hash_map::LinkedHashMap;
 use regex::Regex;
@@ -17,7 +16,7 @@ const NUM_OF_FILES: usize = 5;
 struct File {
     path: String,
     output: String,
-    date: DateTime::<FixedOffset>,
+    date: String,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -31,13 +30,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let recently_used = recently_used_xbel::parse_file()?;
     let get_app = Regex::new(r"[a-zA-Z/]+").unwrap();
 
-    // reverse the order of bookmarks to put the most recent bookmarks at the top
-    let rev_bookmarks: Vec<_> = recently_used.bookmarks.iter().rev().collect();
     // create a HashMap to store file names
     let mut files = LinkedHashMap::<String, Vec<File>>::new();
     // iterates through the bookmarks
-    let mut cmds = Vec::<String>::new();
-    for bookmark in rev_bookmarks {
+    for bookmark in recently_used.bookmarks {
         for app in bookmark.info.metadata.app_parent.apps.iter() {
             // uses Regex to find the command without parameters
             let cmd = get_app.find(&app.exec).unwrap().as_str();
@@ -51,7 +47,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut exists = false;
             // adds the command as a key to the LinkedHashMap if it doesn't already exist
             if !files.contains_key(cmd) {
-                cmds.push(cmd.to_string());
                 files.insert(cmd.to_string(), Vec::new());
             } else {
                 for v in files.get_mut(cmd).unwrap() {
@@ -76,14 +71,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         app.name,
                         app.exec
                     ),
-                    date: DateTime::parse_from_rfc3339(&bookmark.modified).unwrap(),
+                    date: bookmark.modified.to_string(),
                 };
                 files.get_mut(cmd).unwrap().push(ele);
             }
         }
     }
+    // sorts the files with most-recently-used files at the top and truncates the list if needed
+    let cmds: Vec<_> = files.keys().cloned().collect();
     for cmd in cmds {
-        files.get_mut(&cmd).unwrap().sort_by(|a, b| b.date.cmp(&a.date));
+        files
+            .get_mut(&cmd)
+            .unwrap()
+            .sort_by(|a, b| b.date.cmp(&a.date));
         if LIMIT {
             files.get_mut(&cmd).unwrap().truncate(NUM_OF_FILES);
         }
@@ -132,9 +132,7 @@ fn run(files: LinkedHashMap<String, Vec<File>>, choice: String) {
         Some(value) => {
             if let Ok(Fork::Child) = daemon(false, false) {
                 Command::new(cmd)
-                    .arg(
-                        format!("{}", value.split("file://").nth(1).unwrap())
-                    )
+                    .arg(format!("{}", value.split("file://").nth(1).unwrap()))
                     .output()
                     .expect("no such file or directory");
             }
