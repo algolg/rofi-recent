@@ -1,8 +1,8 @@
+use std::collections::HashMap;
 use std::env;
 use std::process::Command;
 
 use fork::{daemon, Fork};
-use linked_hash_map::LinkedHashMap;
 use regex::Regex;
 use urlencoding::decode;
 
@@ -20,18 +20,12 @@ struct File {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args_vec: Vec<String> = env::args().collect();
-    let args: String = args_vec
-        .join(" ")
-        .split("rofi-recent ")
-        .nth(1)
-        .unwrap_or("")
-        .to_string();
+    let args: String = env::args().collect::<Vec<String>>()[1..].to_vec().join(" ");
     let recently_used = recently_used_xbel::parse_file()?;
     let get_app = Regex::new(r"[a-zA-Z/]+").unwrap();
 
     // create a HashMap to store file names
-    let mut files = LinkedHashMap::<String, Vec<File>>::new();
+    let mut files = HashMap::<String, Vec<File>>::new();
     // iterates through the bookmarks
     for bookmark in recently_used.bookmarks {
         for app in bookmark.info.metadata.app_parent.apps.iter() {
@@ -45,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .to_string();
             // create a boolean to prevent duplicate entries
             let mut exists = false;
-            // adds the command as a key to the LinkedHashMap if it doesn't already exist
+            // adds the command as a key to the HashMap if it doesn't already exist
             if !files.contains_key(cmd) {
                 files.insert(cmd.to_string(), Vec::new());
             } else {
@@ -57,7 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-            // adds Files as values to the LinkedHashMap if there are still spaces remaining
+            // adds Files as values to the HashMap if there are still spaces remaining
             if !exists {
                 let ele = File {
                     path: decode(&bookmark.href)?.to_string(),
@@ -88,7 +82,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             files.get_mut(&cmd).unwrap().truncate(NUM_OF_FILES);
         }
     }
-    // without any args, the program will use the LinkedHashMap to print a list
+    // without any args, the program will use the HashMap to print a list
     if args.is_empty() {
         printer(files);
     }
@@ -100,7 +94,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 // prints a list files from the HashMap
-fn printer(files: LinkedHashMap<String, Vec<File>>) {
+fn printer(files: HashMap<String, Vec<File>>) {
     for (k, v) in files {
         for ele in v {
             println!("{} {}", k, ele.output);
@@ -109,12 +103,12 @@ fn printer(files: LinkedHashMap<String, Vec<File>>) {
 }
 
 // opens the chosen file in the desired program
-fn run(files: LinkedHashMap<String, Vec<File>>, choice: String) {
+fn run(files: HashMap<String, Vec<File>>, choice: String) {
     // the first part of choice, which contains the program command
     let cmd = choice.split_whitespace().next().unwrap_or("");
     // the rest of the choice, which contains the file name
     let short_path: String = choice[(cmd.chars().count() + 1)..].to_string();
-    // variable cmd is used to find the vector of files from the LinkedHashMap
+    // variable cmd is used to find the vector of files from the HashMap
     let file_vec = files.get(cmd).unwrap();
     // the path variable will store the full path to the file
     let mut path: Option<&str> = None;
