@@ -28,6 +28,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut files = HashMap::<String, Vec<File>>::new();
     // iterates through the bookmarks
     for bookmark in recently_used.bookmarks {
+        // application type, which is used for the icon and (sometimes) the program name
+        let mimetype: String = bookmark.info.metadata.mime_type.mimetype;
         for app in bookmark.info.metadata.app_parent.apps.iter() {
             // uses Regex to find the command without parameters
             let cmd = get_app.find(&app.exec).unwrap().as_str();
@@ -45,7 +47,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 for v in files.get_mut(cmd).unwrap() {
                     if fname.eq(&v.output.split("\0icon").next().unwrap_or("").to_string()) {
-                        v.output += &(" ".to_owned() + &app.name + &app.exec);
+                        v.output += &format!(
+                            " {} {} {}",
+                            &app.name,
+                            &app.exec,
+                            &mimetype.split("application/x-").nth(1).unwrap_or("")
+                        );
                         exists = true;
                         break;
                     }
@@ -56,14 +63,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let ele = File {
                     path: decode(&bookmark.href)?.to_string(),
                     output: format!(
-                        "{}\0icon\x1f{}\x1fmeta\x1f{} {}",
+                        "{}\0icon\x1f{}\x1fmeta\x1f{} {} {}",
                         // use file name
                         fname,
                         // get icon name by replacing forward slashes in type with dashes
-                        bookmark.info.metadata.mime_type.mimetype.replace("/", "-"),
-                        // these two fields are added solely to make searching more thorough
+                        mimetype.replace("/", "-"),
+                        // these three fields are added solely to make searching more thorough
                         app.name,
-                        app.exec
+                        app.exec,
+                        mimetype.split("application/x-").nth(1).unwrap_or("")
                     ),
                     date: bookmark.modified.to_string(),
                 };
