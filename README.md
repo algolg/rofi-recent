@@ -14,6 +14,8 @@ Once added as a rofi modi, rofi-recent can be used alongside drun for a convenie
   </ol>
 </details>
 
+<img src="https://user-images.githubusercontent.com/55261146/229308553-060b7f99-a667-49c8-b832-dde088e9e44f.png" width=75% height="auto">
+
 ## Dependencies
 
 This project relies on:
@@ -21,7 +23,6 @@ This project relies on:
 - [rofi](https://github.com/davatorium/rofi)
 - [rust](https://www.rust-lang.org/)
 - [cargo](https://github.com/rust-lang/cargo)
-- [make](https://www.gnu.org/software/make/)
 
 ## Install
 
@@ -33,29 +34,29 @@ This project relies on:
    cd rofi-recent
    ```
 
-2. (Optional) By default, our program only displays the 5 most recently used files per program, but this limit can be changed by altering the value of the `NUM_OF_FILES` constant and removed by setting `LIMIT` to `false`. Both of these may be found in `src/main.rs`.
+2. (Optional) By default, rofi-recent only displays the 5 most recently used files per program, but this limit can be changed by altering the value of the `NUM_OF_FILES` constant and removed by setting `LIMIT` to `false`. Both of these may be found in `src/main.rs`.
    ```rust
    const LIMIT: bool = true;
    const NUM_OF_FILES: usize = 5;
    ```
 
-3. Build and Install
+3. Install
    ```sh
-   make all
+   cargo install --path .
    ```
-   This will build and install the program to `~/.local/bin/rofi-recent`. Now, all that's left is to direct rofi to this file.
+   Now, all that's left is to add rofi-recent as a modi.
 
-4. Add `recent:~/.local/bin/rofi-recent` to the modi section of your rofi config file, e.g.
+4. Add `recent:rofi-recent` to the modi section of your rofi config file:
    ```css
    configuration {
-       modi: "combi,drun,recent:~/.local/bin/rofi-recent";
+       modi: "combi,drun,recent:rofi-recent";
        /* ... */
      }
    ```
 
-5. (Optional) By adding rofi-recent as a combi modi, searching for a program will also show a list of files recently opened using the desired program (e.g. searching for GIMP will also show a list of files recently opened in GIMP), which may be more convenient for some users.
+5. By adding rofi-recent as a combi modi, searching for a program will also show a list of files recently opened using the desired program (e.g. searching for GIMP will also show a list of files recently opened in GIMP), which may be more convenient for some users.
 
-   This can be done by adding `recent` to the combi section of the rofi config file, e.g.
+   This can be done by adding `recent` to the combi section of the rofi config file:
    ```css
    configuration {
        /* ... */
@@ -64,7 +65,7 @@ This project relies on:
      }
    ```
 
-6. (Optional) For a cleaner experience, it is recommended that users add the following line to their rofi config files in order to remove the prefix for this modi:
+6. (Optional) For a cleaner experience, I recommend adding this line to your rofi config file to remove the prefix for this modi:
    ```css
    display-recent: "";
    ```
