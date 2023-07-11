@@ -34,27 +34,22 @@ This project relies on:
    cd rofi-recent
    ```
 
-2. (Optional) By default, rofi-recent only displays the 5 most recently used files per program, but this limit can be changed by altering the value of the `NUM_OF_FILES` constant and removed by setting `LIMIT` to `false`. Both of these may be found in `src/main.rs`.
-   ```rust
-   const LIMIT: bool = true;
-   const NUM_OF_FILES: usize = 5;
-   ```
-
-3. Install
+2. Install
    ```sh
    cargo install --path .
    ```
    Now, all that's left is to add rofi-recent as a modi.
 
-4. Add `recent:rofi-recent` to the modi section of your rofi config file:
+3. Add `recent:rofi-recent` to the modi section of your rofi config file:
    ```css
    configuration {
        modi: "combi,drun,recent:rofi-recent";
        /* ... */
      }
    ```
+   By default, rofi-recent shows the 5 most recently-used files for each program. The optional `--limit <LIMIT>` (or `-l`) parameter can be used if you wish to change this limit. Setting the parameter to `0` will remove the limit entirely.
 
-5. By adding rofi-recent as a combi modi, searching for a program will also show a list of files recently opened using the desired program (e.g. searching for GIMP will also show a list of files recently opened in GIMP), which may be more convenient for some users.
+4. By adding rofi-recent as a combi modi, searching for a program will also show a list of files recently opened using the desired program (e.g. searching for GIMP will also show a list of files recently opened in GIMP), which may be more convenient for some users.
 
    This can be done by adding `recent` to the combi section of the rofi config file:
    ```css
@@ -65,7 +60,7 @@ This project relies on:
      }
    ```
 
-6. (Optional) For a cleaner experience, I recommend adding this line to your rofi config file to remove the prefix for this modi:
+5. (Optional) For a cleaner experience, I recommend adding this line to your rofi config file to remove the prefix for this modi:
    ```css
    display-recent: "";
    ```

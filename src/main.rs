@@ -1,17 +1,25 @@
 use std::collections::HashMap;
-use std::env;
 use std::process::Command;
 
+use clap::Parser;
 use fork::{daemon, Fork};
 use regex::Regex;
 use urlencoding::decode;
 
 mod recently_used_xbel;
 
-// setting this to false will remove the limit on the number of files per program
-const LIMIT: bool = true;
-// changing this value will change the limit on the number of files per program
-const NUM_OF_FILES: usize = 5;
+#[derive(Parser,Default,Debug)]
+#[clap(trailing_var_arg = true)]
+struct Arguments {
+    /// Max number of recent files to list per program (0 = unlimited)
+    #[clap(short, long, default_value_t = 5)]
+    limit: usize,
+
+    /// Command to run (program + file).
+    /// Excluding this arg will print a list of recently-used files
+    #[clap(required = false)]
+    command: Vec<String>,
+}
 
 struct File {
     path: String,
@@ -20,7 +28,7 @@ struct File {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: String = env::args().collect::<Vec<String>>()[1..].to_vec().join(" ");
+    let args = Arguments::parse();
     let recently_used = recently_used_xbel::parse_file()?;
     let get_app = Regex::new(r"[a-zA-Z/]+").unwrap();
 
@@ -86,22 +94,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .get_mut(&cmd)
             .unwrap()
             .sort_by(|a, b| b.date.cmp(&a.date));
-        if LIMIT {
-            files.get_mut(&cmd).unwrap().truncate(NUM_OF_FILES);
+        if args.limit > 0 {
+            files.get_mut(&cmd).unwrap().truncate(args.limit);
         }
     }
     // without any args, the program will use the HashMap to print a list
-    if args.is_empty() {
+    if args.command.is_empty() {
         printer(files);
     }
     // with args, the program will attempt to open the file in the desired program
     else {
-        run(files, args);
+        run(files, args.command);
     }
     Ok(())
 }
 
-// prints a list files from the HashMap
+// prints a list of files from the HashMap
 fn printer(files: HashMap<String, Vec<File>>) {
     for (k, v) in files {
         for ele in v {
@@ -111,15 +119,16 @@ fn printer(files: HashMap<String, Vec<File>>) {
 }
 
 // opens the chosen file in the desired program
-fn run(files: HashMap<String, Vec<File>>, choice: String) {
-    // the first part of choice, which contains the program command
-    let cmd = choice.split_whitespace().next().unwrap_or("");
-    // the rest of the choice, which contains the file name
-    let short_path: String = choice[(cmd.chars().count() + 1)..].to_string();
-    // variable cmd is used to find the vector of files from the HashMap
-    let file_vec = files.get(cmd).unwrap();
+fn run(files: HashMap<String, Vec<File>>, command: Vec<String>) {
+    // stores the name of the program to open a file in
+    let program = command[0].to_string();
+    // stores the short path of the file
+    let short_path = command[1..].join(" ");
+    // the program variable is used to find the vector of files from the HashMap
+    let file_vec = files.get(&program).unwrap();
     // the path variable will store the full path to the file
     let mut path: Option<&str> = None;
+    // joining Strings in filename
 
     // compares each file in file_vec with the short_path to look for a match
     for file in file_vec {
@@ -133,7 +142,7 @@ fn run(files: HashMap<String, Vec<File>>, choice: String) {
     match path {
         Some(value) => {
             if let Ok(Fork::Child) = daemon(false, false) {
-                Command::new(cmd)
+                Command::new(program)
                     .arg(format!("{}", value.split("file://").nth(1).unwrap()))
                     .output()
                     .expect("no such file or directory");
