@@ -7,7 +7,6 @@ Once added as a rofi modi, rofi-recent can be used alongside drun for a convenie
 <details>
   <summary><b>Table of Contents</b></summary>
   <ol>
-    <li><a href="#dependencies">Dependencies</a></li>
     <li><a href="#install">Install</a></li>
     <li><a href="#usage">Usage</a></li>
     <li><a href="#contributing">Contributing</a></li>
@@ -16,29 +15,22 @@ Once added as a rofi modi, rofi-recent can be used alongside drun for a convenie
 
 <img src="https://user-images.githubusercontent.com/55261146/229308553-060b7f99-a667-49c8-b832-dde088e9e44f.png" width=75% height="auto">
 
-## Dependencies
-
-This project relies on:
-
-- [rofi](https://github.com/davatorium/rofi)
-- [rust](https://www.rust-lang.org/)
-- [cargo](https://github.com/rust-lang/cargo)
-
 ## Install
 
-1. Clone this repo
+1. Download the latest [release](https://github.com/algolg/rofi-recent/releases)
+
+2. Extract the archive and make the program executable
    ```sh
-   git clone https://github.com/algolg/rofi-recent
-   ```
-   ```sh
-   cd rofi-recent
+   chmod +x rofi-recent
    ```
 
-2. Install
+3. Install by copying the program to a location in `PATH` (run `echo $PATH` to list locations)
+   
+   Ex. this works if `~/.local/bin/` is in `PATH`:
    ```sh
-   cargo install --path .
+   cp rofi-recent ~/.local/bin/
    ```
-   Now, all that's left is to add rofi-recent as a modi.
+   Note: if you choose not to install rofi-recent, make sure to give rofi the path to rofi-recent in the next step
 
 3. Add `recent:rofi-recent` to the modi section of your rofi config file:
    ```css
@@ -47,11 +39,14 @@ This project relies on:
        /* ... */
      }
    ```
-   By default, rofi-recent shows the 5 most recently-used files for each program. The optional `--limit <LIMIT>` (or `-l`) parameter can be used if you wish to change this limit. Setting the parameter to `0` will remove the limit entirely.
+   Note: if you did not install rofi-recent, add `recent:/path/to/rofi-recent` instead
 
-4. By adding rofi-recent as a combi modi, searching for a program will also show a list of files recently opened using the desired program (e.g. searching for GIMP will also show a list of files recently opened in GIMP), which may be more convenient for some users.
+   By default, rofi-recent shows the 5 most-recently-used files for each program. The optional `--limit <LIMIT>` (or `-l`) parameter can change this limit. Setting the parameter to `0` will remove the limit entirely
 
-   This can be done by adding `recent` to the combi section of the rofi config file:
+
+4. By using rofi-recent with drun, searching for an application will also show a list of files recently opened in that application (ex. searching for GIMP will also show a list of files recently opened in GIMP, as in the image above)
+
+   This can be done by adding `drun` and `recent` to the combi section in `config.rasi`:
    ```css
    configuration {
        /* ... */
@@ -60,7 +55,7 @@ This project relies on:
      }
    ```
 
-5. (Optional) For a cleaner experience, I recommend adding this line to your rofi config file to remove the prefix for this modi:
+5. For a cleaner experience, I recommend adding this line to `config.rasi` to remove the prefix for rofi-recent:
    ```css
    display-recent: "";
    ```
@@ -73,7 +68,7 @@ Now, rofi-recent can easily be called from the terminal:
 rofi -show recent
 ```
 
-If rofi-recent was added as a combi modi, the following command should also show rofi-recent:
+If rofi-recent was added as a combi modi, the following command should also work:
 
 ```sh
 rofi -show combi
