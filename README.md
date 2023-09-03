@@ -32,7 +32,7 @@ Once added as a rofi modi, rofi-recent can be used alongside drun for a convenie
    ```
    Note: if you choose not to install rofi-recent, make sure to give rofi the path to rofi-recent in the next step
 
-3. Add `recent:rofi-recent` to the modi section of your rofi config file:
+4. Add `recent:rofi-recent` to the modi section of your rofi config file:
    ```css
    configuration {
        modi: "combi,drun,recent:rofi-recent";
@@ -44,7 +44,7 @@ Once added as a rofi modi, rofi-recent can be used alongside drun for a convenie
    By default, rofi-recent shows the 5 most-recently-used files for each program. The optional `--limit <LIMIT>` (or `-l`) parameter can change this limit. Setting the parameter to `0` will remove the limit entirely
 
 
-4. By using rofi-recent with drun, searching for an application will also show a list of files recently opened in that application (ex. searching for GIMP will also show a list of files recently opened in GIMP, as in the image above)
+5. By using rofi-recent with drun, searching for an application will also show a list of files recently opened in that application (ex. searching for GIMP will also show a list of files recently opened in GIMP, as in the image above)
 
    This can be done by adding `drun` and `recent` to the combi section in `config.rasi`:
    ```css
@@ -55,7 +55,7 @@ Once added as a rofi modi, rofi-recent can be used alongside drun for a convenie
      }
    ```
 
-5. For a cleaner experience, I recommend adding this line to `config.rasi` to remove the prefix for rofi-recent:
+6. For a cleaner experience, I recommend adding this line to `config.rasi` to remove the prefix for rofi-recent:
    ```css
    display-recent: "";
    ```
