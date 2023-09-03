@@ -17,18 +17,33 @@ mod recently_used_xbel;
 #[derive(Parser, Default, Debug)]
 #[clap(trailing_var_arg = true)]
 struct Arguments {
-    /// Max number of recent files to list per program (0 = unlimited)
-    #[clap(short, long, default_value_t = 5)]
+    /// Max number of recent files to list per program
+    /// (0 = unlimited)
+    #[clap(short, long, default_value_t = 5, verbatim_doc_comment)]
     limit: usize,
 
-    /// Command to run (program + file).
+    /// Program(s) to exclude
+    /// Take word-for-word from rofi-recent's output
+    /// If excluding multiple programs, encase in quotes with a space between each program
+    #[clap(short, long, default_value = "", hide_default_value = true, verbatim_doc_comment)]
+    exclude: String,
+
+    /// Shows paths for all files
+    #[clap(short, long, default_value_t = false, num_args = 0, verbatim_doc_comment)]
+    show_all_paths: bool,
+
+    /// Command to run (program + file)
     /// Excluding this arg will print a list of recently-used files
-    #[clap(required = false, num_args = 1.., value_delimiter = ' ')]
+    #[clap(required = false, num_args = 1.., value_delimiter = ' ', verbatim_doc_comment)]
     command: Vec<String>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // stores program names and their corresponding files
     let mut files = HashMap::<String, Vec<File>>::new();
+    // parse args here in order to quickly skip files from excluded programs
+    let args = Arguments::parse();
+    let excluded: Vec<&str> = args.exclude.split(" ").collect::<Vec<_>>();
     // iterates through the bookmarks
     let recently_used = recently_used_xbel::parse_file()?;
     // create a HashMap to store file names
@@ -40,7 +55,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         for app in bookmark.info.metadata.app_parent.apps.iter() {
             // stores the command without parameters
             let cmd = get_app.find(&app.exec).unwrap().as_str();
-            // split directory and file name to only show file name
+            // if cmd is one of the excluded programs, then skip this file
+            if excluded.contains(&cmd) {
+                continue;
+            }
+            // store path and filename to variables
             let path = Path::new(&bookmark.href);
             let fname = path.file_name().unwrap().to_str().unwrap().to_string();
             // create a boolean to prevent duplicate entries
@@ -64,7 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             // adds Files as values to the HashMap if there are still spaces remaining
             if !exists {
-                let ele = File {
+                let mut ele = File {
                     path: path.to_path_buf(),
                     filename: decode(&fname)?.to_string(),
                     output: format!(
@@ -80,13 +99,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ),
                     date: bookmark.modified.to_string(),
                 };
+                // add paths to all outputs if flag was given
+                if args.show_all_paths {
+                    ele.add_path();
+                }
                 files.get_mut(cmd).unwrap().push(ele);
             }
         }
     }
     // sorts the files with most-recently-used files at the top and truncates the list if needed
     let cmds: Vec<_> = files.keys().cloned().collect();
-    let args = Arguments::parse();
     for cmd in cmds {
         files
             .get_mut(&cmd)
@@ -97,20 +119,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     // adds paths to outputs if files of the same program have the same name
-    let mut need_path = Vec::new();
-    for (k, v) in files.iter() {
-        let it = 0..v.len();
-        for pair in it.combinations(2) {
-            let first: usize = pair.first().unwrap().to_owned();
-            let last: usize = pair.last().unwrap().to_owned();
-            if v.get(first).unwrap().filename == v.get(last).unwrap().filename {
-                need_path.push((k.clone(), [first, last]));
-            }
+    if !args.show_all_paths {
+        let mut all_need_path: Vec<(String, [usize; 2])> = Vec::new();
+        for (k, v) in files.iter() {
+            all_need_path.append(&mut need_path(&k, &v));
         }
-    }
-    for (k, i) in need_path {
-        files.get_mut(&k).unwrap().get_mut(i[0]).unwrap().add_path();
-        files.get_mut(&k).unwrap().get_mut(i[1]).unwrap().add_path();
+        for (k, i) in all_need_path {
+            files.get_mut(&k).unwrap().get_mut(i[0]).unwrap().add_path();
+            files.get_mut(&k).unwrap().get_mut(i[1]).unwrap().add_path();
+        }
     }
 
     // without any args, the program will use the HashMap to print a list
@@ -124,12 +141,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn need_path(k: &String, v: &Vec<File>) -> Vec<(String, [usize; 2])> {
+    let mut need_path = Vec::new();
+    let it = 0..v.len();
+    for pair in it.combinations(2) {
+        let first: usize = pair.first().unwrap().to_owned();
+        let last: usize = pair.last().unwrap().to_owned();
+        if v.get(first).unwrap().filename == v.get(last).unwrap().filename {
+            need_path.push((k.clone(), [first, last]));
+        }
+    }
+    need_path
+}
+
 // prints a list of files from the HashMap
 fn printer(files: HashMap<String, Vec<File>>) {
     println!("\0markup-rows\x1ftrue\n");
     for (k, v) in files {
         for ele in v {
-            println!("{} {} {}", k, ele.filename, ele.output);
+            println!("{} {} {}", k, ele.filename.replace("&", "&amp;"), ele.output);
         }
     }
 }

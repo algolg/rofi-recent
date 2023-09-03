@@ -15,7 +15,7 @@ impl File {
     // add path to file output
     pub fn add_path(&mut self) {
         self.output = format!(
-            "\t<i><small>{}</small></i> {}",
+            " <i><small>{}</small></i> {}",
             decode(&self.path.to_str().unwrap())
                 .unwrap()
                 .to_string()
@@ -24,8 +24,9 @@ impl File {
                 .unwrap()
                 .split("file://")
                 .nth(1)
-                .unwrap()
-                .replace(home_dir().unwrap().to_str().unwrap(), "~"),
+                .unwrap_or("")
+                .replace(home_dir().unwrap().to_str().unwrap(), "~")
+                .replace("&", "&amp;"),
             &self.output,
         )
     }
