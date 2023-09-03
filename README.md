@@ -32,7 +32,7 @@ Once added as a rofi modi, rofi-recent can be used alongside drun for a convenie
    ```
    Note: if you choose not to install rofi-recent, make sure to give rofi the path to rofi-recent in the next step
 
-4. Add `recent:rofi-recent` to the modi section of your rofi config file:
+4. Add `recent:rofi-recent` to the modi section in `config.rasi`:
    ```css
    configuration {
        modi: "combi,drun,recent:rofi-recent";
@@ -41,7 +41,7 @@ Once added as a rofi modi, rofi-recent can be used alongside drun for a convenie
    ```
    Note: if you did not install rofi-recent, add `recent:/path/to/rofi-recent` instead
 
-   By default, rofi-recent shows the 5 most-recently-used files for each program. The optional `--limit <LIMIT>` (or `-l`) parameter can change this limit. Setting the parameter to `0` will remove the limit entirely
+   See [Arguments](#arguments) for options you can add to the command
 
 
 5. By using rofi-recent with drun, searching for an application will also show a list of files recently opened in that application (ex. searching for GIMP will also show a list of files recently opened in GIMP, as in the image above)
@@ -72,6 +72,24 @@ If rofi-recent was added as a combi modi, the following command should also work
 
 ```sh
 rofi -show combi
+```
+
+### Arguments
+
+You can optionally add any of these arguments in `config.rasi`
+
+| Argument | Accepts a value? | Purpose |
+| -------------------------- | --- | -------- |
+| `-l` or `--limit`          | yes | Specify the max number of recent files to list per program. Set to `0` to disable the limit. Default limit is 5 files per program. |
+| `-e` or `--exclude`        | yes | Specify programs to exclude from output. Take the program names word-for-word from rofi-recent's output. If excluding multiple programs, encase in quotes with a space between each program (ex. `rofi-recent -e "gimp firefox"`). Remember to escape quotes if needed. |
+| `-s` or `--show-all-paths` | no  | Shows full path for all files |
+
+Ex. `config.rasi`, using all arguments:
+```css
+configuration {
+      modi: "combi,drun,recent:rofi-recent -l 0 -e \"gimp firefox\" -s";
+      /* ... */
+   }
 ```
 
 ## Contributing
