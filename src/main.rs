@@ -1,17 +1,20 @@
 use std::collections::HashMap;
 use std::env;
 use std::path::Path;
-use std::path::PathBuf;
 use std::process::Command;
 
 use clap::Parser;
 use fork::{daemon, Fork};
+use itertools::Itertools;
 use regex::Regex;
 use urlencoding::decode;
 
+use crate::file::File;
+
+mod file;
 mod recently_used_xbel;
 
-#[derive(Parser,Default,Debug)]
+#[derive(Parser, Default, Debug)]
 #[clap(trailing_var_arg = true)]
 struct Arguments {
     /// Max number of recent files to list per program (0 = unlimited)
@@ -22,12 +25,6 @@ struct Arguments {
     /// Excluding this arg will print a list of recently-used files
     #[clap(required = false, num_args = 1.., value_delimiter = ' ')]
     command: Vec<String>,
-}
-
-struct File {
-    path: PathBuf,
-    output: String,
-    date: String,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -45,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let cmd = get_app.find(&app.exec).unwrap().as_str();
             // split directory and file name to only show file name
             let path = Path::new(&bookmark.href);
-            let fname = path.file_name().unwrap().to_str().unwrap();
+            let fname = path.file_name().unwrap().to_str().unwrap().to_string();
             // create a boolean to prevent duplicate entries
             let mut exists = false;
             // adds the command as a key to the HashMap if it doesn't already exist
@@ -69,10 +66,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if !exists {
                 let ele = File {
                     path: path.to_path_buf(),
+                    filename: decode(&fname)?.to_string(),
                     output: format!(
-                        "{}\0icon\x1f{}\x1finfo\x1f{}\x1fmeta\x1f{} {} {}",
-                        // use file name
-                        decode(&fname)?.to_string(),
+                        "\0icon\x1f{}\x1finfo\x1f{}\x1fmeta\x1f{} {} {}",
                         // get icon name by replacing forward slashes in type with dashes
                         mimetype.replace("/", "-"),
                         // store the absolute file path in ROFI_INFO environment variable
@@ -100,6 +96,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             files.get_mut(&cmd).unwrap().truncate(args.limit);
         }
     }
+    // adds paths to outputs if files of the same program have the same name
+    let mut need_path = Vec::new();
+    for (k, v) in files.iter() {
+        let it = 0..v.len();
+        for pair in it.combinations(2) {
+            let first: usize = pair.first().unwrap().to_owned();
+            let last: usize = pair.last().unwrap().to_owned();
+            if v.get(first).unwrap().filename == v.get(last).unwrap().filename {
+                need_path.push((k.clone(), [first, last]));
+            }
+        }
+    }
+    for (k, i) in need_path {
+        files.get_mut(&k).unwrap().get_mut(i[0]).unwrap().add_path();
+        files.get_mut(&k).unwrap().get_mut(i[1]).unwrap().add_path();
+    }
+
     // without any args, the program will use the HashMap to print a list
     if args.command.is_empty() {
         printer(files);
@@ -113,9 +126,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 // prints a list of files from the HashMap
 fn printer(files: HashMap<String, Vec<File>>) {
+    println!("\0markup-rows\x1ftrue\n");
     for (k, v) in files {
         for ele in v {
-            println!("{} {}", k, ele.output);
+            println!("{} {} {}", k, ele.filename, ele.output);
         }
     }
 }
