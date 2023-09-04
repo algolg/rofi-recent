@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use dirs::home_dir;
+use htmlescape::encode_minimal;
 use urlencoding::decode;
 
 #[derive(Debug)]
@@ -16,17 +17,18 @@ impl File {
     pub fn add_path(&mut self) {
         self.output = format!(
             " <i><small>{}</small></i> {}",
-            decode(&self.path.to_str().unwrap())
-                .unwrap()
-                .to_string()
-                .split(&self.filename)
-                .nth(0)
-                .unwrap()
-                .split("file://")
-                .nth(1)
-                .unwrap_or("")
-                .replace(home_dir().unwrap().to_str().unwrap(), "~")
-                .replace("&", "&amp;"),
+            encode_minimal(
+                &decode(&self.path.to_str().unwrap())
+                    .unwrap()
+                    .to_string()
+                    .split(&self.filename)
+                    .nth(0)
+                    .unwrap()
+                    .split("file://")
+                    .nth(1)
+                    .unwrap_or("")
+                    .replace(home_dir().unwrap().to_str().unwrap(), "~")
+            ),
             &self.output,
         )
     }

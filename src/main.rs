@@ -5,6 +5,7 @@ use std::process::Command;
 
 use clap::Parser;
 use fork::{daemon, Fork};
+use htmlescape::encode_minimal;
 use itertools::Itertools;
 use regex::Regex;
 use urlencoding::decode;
@@ -159,7 +160,7 @@ fn printer(files: HashMap<String, Vec<File>>) {
     println!("\0markup-rows\x1ftrue\n");
     for (k, v) in files {
         for ele in v {
-            println!("{} {} {}", k, ele.filename.replace("&", "&amp;"), ele.output);
+            println!("{} {} {}", k, encode_minimal(&ele.filename), ele.output);
         }
     }
 }
