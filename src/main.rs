@@ -10,54 +10,50 @@ use itertools::Itertools;
 use regex::Regex;
 use urlencoding::decode;
 
-use crate::file::File;
+use crate::file::{format_output, format_output_tail, File};
+use crate::recently_used_xbel::RecentlyUsed;
 
+mod arguments;
 mod file;
 mod recently_used_xbel;
 
-#[derive(Parser, Default, Debug)]
-#[clap(trailing_var_arg = true)]
-struct Arguments {
-    /// Max number of recent files to list per program
-    /// (0 = unlimited)
-    #[clap(short, long, default_value_t = 5, verbatim_doc_comment)]
-    limit: usize,
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = arguments::Arguments::parse();
+    let excluded: Vec<&str> = args.exclude.split(" ").collect::<Vec<_>>();
 
-    /// Program(s) to exclude
-    /// Take word-for-word from rofi-recent's output
-    /// If excluding multiple programs, encase in quotes with a space between each program
-    #[clap(short, long, default_value = "", hide_default_value = true, verbatim_doc_comment)]
-    exclude: String,
+    let recently_used = recently_used_xbel::parse_file()?;
+    let mut files = store_files(recently_used, args.show_all_paths, &excluded)?;
 
-    /// Shows paths for all files
-    #[clap(short, long, default_value_t = false, num_args = 0, verbatim_doc_comment)]
-    show_all_paths: bool,
+    sort_and_truncate_files(&mut files, args.limit);
 
-    /// Command to run (program + file)
-    /// Excluding this arg will print a list of recently-used files
-    #[clap(required = false, num_args = 1.., value_delimiter = ' ', verbatim_doc_comment)]
-    command: Vec<String>,
+    // adds paths to outputs if files of the same program have the same filename
+    if !args.show_all_paths {
+        show_paths_when_needed(&mut files);
+    }
+
+    // without any args, the program will use the HashMap to print a list
+    if args.command.is_empty() {
+        printer(files);
+    }
+    // with args, the program will attempt to open the file in the desired program
+    else {
+        run(args.command);
+    }
+
+    Ok(())
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // stores program names and their corresponding files
+fn store_files(recently_used: RecentlyUsed, show_all_paths: bool, excluded: &Vec<&str>) -> Result<HashMap<String, Vec<File>>, Box<dyn std::error::Error>> {
     let mut files = HashMap::<String, Vec<File>>::new();
-    // parse args here in order to quickly skip files from excluded programs
-    let args = Arguments::parse();
-    let excluded: Vec<&str> = args.exclude.split(" ").collect::<Vec<_>>();
-    // iterates through the bookmarks
-    let recently_used = recently_used_xbel::parse_file()?;
-    // create a HashMap to store file names
+    let get_app = Regex::new(r"[a-zA-Z/]+").unwrap();
     for bookmark in recently_used.bookmarks {
         // application type, which is used for the icon and (sometimes) the program name
         let mimetype: String = bookmark.info.metadata.mime_type.mimetype;
-        // Regex to find command without parameters
-        let get_app = Regex::new(r"[a-zA-Z/]+").unwrap();
         for app in bookmark.info.metadata.app_parent.apps.iter() {
             // stores the command without parameters
             let cmd = get_app.find(&app.exec).unwrap().as_str();
             // if cmd is one of the excluded programs, then skip this file
-            if excluded.contains(&cmd) {
+            if (*excluded).contains(&cmd) {
                 continue;
             }
             // store path and filename to variables
@@ -71,10 +67,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 for v in files.get_mut(cmd).unwrap() {
                     if path.eq(&v.path) {
-                        v.output += &format!(
-                            " {} {} {}",
-                            &app.name,
-                            &app.exec,
+                        v.output += &format_output_tail(&app.name, &app.exec,
                             &mimetype.split("application/x-").nth(1).unwrap_or("")
                         );
                         exists = true;
@@ -82,64 +75,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-            // adds Files as values to the HashMap if there are still spaces remaining
-            if !exists {
-                let mut ele = File {
-                    path: path.to_path_buf(),
-                    filename: decode(&fname)?.to_string(),
-                    output: format!(
-                        "\0icon\x1f{}\x1finfo\x1f{}\x1fmeta\x1f{} {} {}",
-                        // get icon name by replacing forward slashes in type with dashes
-                        mimetype.replace("/", "-"),
-                        // store the absolute file path in ROFI_INFO environment variable
-                        decode(&path.to_str().unwrap())?.to_string(),
-                        // these three fields are added solely to make searching more thorough
-                        app.name,
-                        app.exec,
-                        mimetype.split("application/x-").nth(1).unwrap_or("")
-                    ),
-                    date: bookmark.modified.to_string(),
-                };
-                // add paths to all outputs if flag was given
-                if args.show_all_paths {
-                    ele.add_path();
-                }
-                files.get_mut(cmd).unwrap().push(ele);
+            if exists {
+                continue;
             }
+            // adds Files as values to the HashMap
+            let mut ele = File {
+                path: path.to_path_buf(),
+                filename: decode(&fname)?.to_string(),
+                output: format_output(&mimetype.replace("/", "-"), &decode(&path.to_str().unwrap())?,
+                                      &app.name, &app.exec, mimetype.split("application/x-").nth(1).unwrap_or("")),
+                date: bookmark.modified.to_string(),
+            };
+            // add paths to all outputs if flag was given
+            if show_all_paths {
+                ele.add_path();
+            }
+            files.get_mut(cmd).unwrap().push(ele);
         }
     }
-    // sorts the files with most-recently-used files at the top and truncates the list if needed
-    let cmds: Vec<_> = files.keys().cloned().collect();
+    return Ok(files);
+}
+
+// sorts the files with most-recently-used files at the top and truncates the list if needed
+fn sort_and_truncate_files(files: &mut HashMap<String, Vec<File>>, limit: usize) {
+    let cmds: Vec<_> = (*files).keys().cloned().collect();
     for cmd in cmds {
-        files
+        (*files)
             .get_mut(&cmd)
             .unwrap()
             .sort_by(|a, b| b.date.cmp(&a.date));
-        if args.limit > 0 {
-            files.get_mut(&cmd).unwrap().truncate(args.limit);
+        if limit > 0 {
+            (*files).get_mut(&cmd).unwrap().truncate(limit);
         }
     }
-    // adds paths to outputs if files of the same program have the same name
-    if !args.show_all_paths {
-        let mut all_need_path: Vec<(String, [usize; 2])> = Vec::new();
-        for (k, v) in files.iter() {
-            all_need_path.append(&mut need_path(&k, &v));
-        }
-        for (k, i) in all_need_path {
-            files.get_mut(&k).unwrap().get_mut(i[0]).unwrap().add_path();
-            files.get_mut(&k).unwrap().get_mut(i[1]).unwrap().add_path();
-        }
-    }
+}
 
-    // without any args, the program will use the HashMap to print a list
-    if args.command.is_empty() {
-        printer(files);
+fn show_paths_when_needed(files: &mut HashMap<String, Vec<File>>) {
+    let mut all_need_path: Vec<(String, [usize; 2])> = Vec::new();
+    for (k, v) in (*files).iter() {
+        all_need_path.append(&mut need_path(&k, &v));
     }
-    // with args, the program will attempt to open the file in the desired program
-    else {
-        run(args.command);
+    for (k, i) in all_need_path {
+        (*files).get_mut(&k).unwrap().get_mut(i[0]).unwrap().add_path();
+        (*files).get_mut(&k).unwrap().get_mut(i[1]).unwrap().add_path();
     }
-    Ok(())
 }
 
 fn need_path(k: &String, v: &Vec<File>) -> Vec<(String, [usize; 2])> {
@@ -177,7 +156,7 @@ fn run(command: Vec<String>) {
         Ok(value) => {
             if let Ok(Fork::Child) = daemon(false, false) {
                 Command::new(program)
-                    .arg(format!("{}", value.split("file://").nth(1).unwrap()))
+                    .arg(format!("{}", decode(&value).unwrap()))
                     .output()
                     .expect("no such file or directory");
             }

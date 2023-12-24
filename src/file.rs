@@ -33,3 +33,24 @@ impl File {
         )
     }
 }
+
+pub fn format_output(icon: &str, absolute_path: &str, app_name: &str, app_exec: &str, mimetype: &str) -> String {
+    format!(
+        "\0icon\x1f{}\x1finfo\x1f{}\x1fmeta\x1f{}",
+        // get icon name by replacing forward slashes in type with dashes
+        icon,
+        // store the absolute file path in ROFI_INFO environment variable
+        absolute_path,
+        // these three fields are added solely to make searching more thorough
+        format_output_tail(app_name, app_exec, mimetype)
+    )
+}
+
+pub fn format_output_tail(app_name: &str, app_exec: &str, mimetype: &str) -> String {
+    format!(
+        " {} {} {}",
+        app_name,
+        app_exec,
+        mimetype
+    )
+}
