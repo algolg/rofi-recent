@@ -13,7 +13,7 @@ Once added as a rofi modi, rofi-recent can be used alongside drun for a convenie
   </ol>
 </details>
 
-<img src="https://user-images.githubusercontent.com/55261146/229308553-060b7f99-a667-49c8-b832-dde088e9e44f.png" width=75% height="auto">
+https://github.com/algolg/rofi-recent/assets/55261146/aca5906d-e7cf-4abf-8a05-06c5f9691847
 
 ## Install
 
@@ -21,16 +21,19 @@ Once added as a rofi modi, rofi-recent can be used alongside drun for a convenie
 
 2. Extract the archive and make the program executable
    ```sh
-   chmod +x rofi-recent
+   tar -xvf rofi-recent-vX.Y.Z.tar.gz
+   chmod +x ./rofi-recent
    ```
 
-3. Install by copying the program to a location in `PATH` (run `echo $PATH` to list locations)
+3. Install by moving the program to your preferred location in `PATH` (run `echo $PATH` to list locations)
    
    Ex. this works if `~/.local/bin/` is in `PATH`:
    ```sh
-   cp rofi-recent ~/.local/bin/
+   mv ./rofi-recent ~/.local/bin/
    ```
    Note: if you choose not to install rofi-recent, make sure to give rofi the path to rofi-recent in the next step
+
+### Adding rofi-recent to rofi
 
 4. Add `recent:rofi-recent` to the modi section in `config.rasi`:
    ```css
@@ -44,7 +47,7 @@ Once added as a rofi modi, rofi-recent can be used alongside drun for a convenie
    See [Arguments](#arguments) for options you can add to the command
 
 
-5. By using rofi-recent with drun, searching for an application will also show a list of files recently opened in that application (ex. searching for GIMP will also show a list of files recently opened in GIMP, as in the image above)
+5. By using rofi-recent with drun, searching for an application will also show a list of files recently opened in that application (ex. searching for GIMP will also show a list of files recently opened in GIMP, as in the video above)
 
    This can be done by adding `drun` and `recent` to the combi section in `config.rasi`:
    ```css

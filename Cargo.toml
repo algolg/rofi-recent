@@ -1,6 +1,6 @@
 [package]
 name = "rofi-recent"
-version = "0.2.2"
+version = "0.2.4"
 edition = "2021"
 description = "A rofi script that provides quick access to recently-used files"
 repository = "https://github.com/algolg/rofi-recent"
