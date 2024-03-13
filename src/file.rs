@@ -1,8 +1,6 @@
 use std::path::PathBuf;
 
 use dirs::home_dir;
-use htmlescape::encode_minimal;
-use urlencoding::decode;
 
 #[derive(Debug)]
 pub struct File {
@@ -22,13 +20,10 @@ impl File {
         let path_str = self.path.to_str().unwrap();
         self.output = format!(
             " <i><small>{}</small></i> {}",
-            encode_minimal(
-                &decode(path_str)
-                    .unwrap()
-                    // remove file uri and filename from path
-                    .to_string()[("file://".len())..(path_str.len() - self.filename.len())]
-                    .replace(home_dir().unwrap().to_str().unwrap(), "~")
-            ),
+            path_str
+                // remove filename from path
+                .to_string()[0..(path_str.len() - self.filename.len())]
+                .replace(home_dir().unwrap().to_str().unwrap(), "~"),
             &self.output
         );
         self.path_added = true;

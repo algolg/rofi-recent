@@ -1,14 +1,12 @@
 use std::collections::HashMap;
 use std::env;
-use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
 
 use clap::Parser;
 use fork::{daemon, Fork};
-use htmlescape::encode_minimal;
 use itertools::Itertools;
-use regex::Regex;
-use urlencoding::decode;
+use url::Url;
 
 use crate::file::{format_output, format_output_tail, File};
 use crate::recently_used_xbel::RecentlyUsed;
@@ -45,20 +43,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn store_files(recently_used: RecentlyUsed, show_all_paths: bool, excluded: &Vec<&str>) -> Result<HashMap<String, Vec<File>>, Box<dyn std::error::Error>> {
     let mut files = HashMap::<String, Vec<File>>::new();
-    let get_app = Regex::new(r"[a-zA-Z/]+").unwrap();
+    // let get_app = Regex::new(r"[a-zA-Z/]+").unwrap();
     for bookmark in recently_used.bookmarks {
         // application type, which is used for the icon and (sometimes) the program name
         let mimetype: String = bookmark.info.metadata.mime_type.mimetype;
         for app in bookmark.info.metadata.app_parent.apps.iter() {
             // stores the command without parameters
-            let cmd = get_app.find(&app.exec).unwrap().as_str();
+            let cmd: &str = &app.exec[1..].split(" ").next().unwrap();
             // if cmd is one of the excluded programs, then skip this file
             if (*excluded).contains(&cmd) {
                 continue;
             }
             // store path and filename to variables
-            let path = Path::new(&bookmark.href);
-            let fname = path.file_name().unwrap().to_str().unwrap().to_string();
+            let path: PathBuf = (Url::parse(&bookmark.href)?).to_file_path().unwrap();
+            let fname: &str;
+            let fname_try = path.file_name();
+            match fname_try {
+                None => {
+                    fname = "/";
+                }
+                Some(value) => {
+                    fname = value.to_str().expect("/");
+                }
+            }
             // create a boolean to prevent duplicate entries
             let mut exists = false;
             // adds the command as a key to the HashMap if it doesn't already exist
@@ -82,8 +89,8 @@ fn store_files(recently_used: RecentlyUsed, show_all_paths: bool, excluded: &Vec
             let mut ele = File {
                 path: path.to_path_buf(),
                 path_added: false,
-                filename: decode(&fname)?.to_string(),
-                output: format_output(&mimetype.replace("/", "-"), &decode(&path.to_str().unwrap())?,
+                filename: fname.to_string(),
+                output: format_output(&mimetype.replace("/", "-"), &path.to_str().unwrap(),
                                       &app.name, &app.exec, mimetype.split("application/x-").nth(1).unwrap_or("")),
                 date: bookmark.modified.to_string(),
             };
@@ -143,7 +150,7 @@ fn printer(files: HashMap<String, Vec<File>>) {
     println!("\0markup-rows\x1ftrue\n");
     for (k, v) in files {
         for ele in v {
-            println!("{} {} {}", k, encode_minimal(&ele.filename), ele.output);
+            println!("{} {} {}", k, ele.filename, ele.output);
         }
     }
 }
@@ -160,7 +167,7 @@ fn run(command: Vec<String>) {
         Ok(value) => {
             if let Ok(Fork::Child) = daemon(false, false) {
                 Command::new(program)
-                    .arg(format!("{}", decode(&value).unwrap()))
+                    .arg(format!("{}", &value))
                     .output()
                     .expect("no such file or directory");
             }

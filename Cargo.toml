@@ -1,6 +1,6 @@
 [package]
 name = "rofi-recent"
-version = "0.2.4"
+version = "0.2.5"
 edition = "2021"
 description = "A rofi script that provides quick access to recently-used files"
 repository = "https://github.com/algolg/rofi-recent"
@@ -10,13 +10,11 @@ license = "MIT"
 clap = { version = "4.5.2", features = ["derive"] }
 dirs = "4.0.0"
 fork = "0.1.19"
-htmlescape = "0.3.1"
 itertools = "0.11.0"
-regex = "1.5.6"
 serde = { version = "1.0.136", features = ["derive"] }
 serde-xml-rs = "0.5.1"
 thiserror = "1.0.30"
-urlencoding = "2.1.0"
+url = "2.5.0"
 
 [profile.release]
 strip = true
