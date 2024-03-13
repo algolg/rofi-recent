@@ -81,6 +81,7 @@ fn store_files(recently_used: RecentlyUsed, show_all_paths: bool, excluded: &Vec
             // adds Files as values to the HashMap
             let mut ele = File {
                 path: path.to_path_buf(),
+                path_added: false,
                 filename: decode(&fname)?.to_string(),
                 output: format_output(&mimetype.replace("/", "-"), &decode(&path.to_str().unwrap())?,
                                       &app.name, &app.exec, mimetype.split("application/x-").nth(1).unwrap_or("")),
@@ -98,32 +99,35 @@ fn store_files(recently_used: RecentlyUsed, show_all_paths: bool, excluded: &Vec
 
 // sorts the files with most-recently-used files at the top and truncates the list if needed
 fn sort_and_truncate_files(files: &mut HashMap<String, Vec<File>>, limit: usize) {
-    let cmds: Vec<_> = (*files).keys().cloned().collect();
+    let cmds: Vec<_> = files.keys().cloned().collect();
     for cmd in cmds {
-        (*files)
+        files
             .get_mut(&cmd)
             .unwrap()
             .sort_by(|a, b| b.date.cmp(&a.date));
         if limit > 0 {
-            (*files).get_mut(&cmd).unwrap().truncate(limit);
+            files.get_mut(&cmd).unwrap().truncate(limit);
         }
     }
 }
 
+// adds paths to files with non-unique names
 fn show_paths_when_needed(files: &mut HashMap<String, Vec<File>>) {
     let mut all_need_path: Vec<(String, [usize; 2])> = Vec::new();
-    for (k, v) in (*files).iter() {
+    for (k, v) in files.iter() {
         all_need_path.append(&mut need_path(&k, &v));
     }
     for (k, i) in all_need_path {
-        (*files).get_mut(&k).unwrap().get_mut(i[0]).unwrap().add_path();
-        (*files).get_mut(&k).unwrap().get_mut(i[1]).unwrap().add_path();
+        files.get_mut(&k).unwrap().get_mut(i[0]).unwrap().add_path();
+        files.get_mut(&k).unwrap().get_mut(i[1]).unwrap().add_path();
     }
 }
 
+// returns a vector that refers to the files which need paths added
+// return value contains the command name and file numbers of the files which need paths added
 fn need_path(k: &String, v: &Vec<File>) -> Vec<(String, [usize; 2])> {
     let mut need_path = Vec::new();
-    let it = 0..v.len();
+    let it = 0..(v.len());
     for pair in it.combinations(2) {
         let first: usize = pair.first().unwrap().to_owned();
         let last: usize = pair.last().unwrap().to_owned();

@@ -7,6 +7,7 @@ use urlencoding::decode;
 #[derive(Debug)]
 pub struct File {
     pub path: PathBuf,
+    pub path_added: bool,
     pub filename: String,
     pub output: String,
     pub date: String,
@@ -15,22 +16,22 @@ pub struct File {
 impl File {
     // add path to file output
     pub fn add_path(&mut self) {
+        if self.path_added == true {
+            return;
+        }
+        let path_str = self.path.to_str().unwrap();
         self.output = format!(
             " <i><small>{}</small></i> {}",
             encode_minimal(
-                &decode(&self.path.to_str().unwrap())
+                &decode(path_str)
                     .unwrap()
-                    .to_string()
-                    .split(&self.filename)
-                    .nth(0)
-                    .unwrap()
-                    .split("file://")
-                    .nth(1)
-                    .unwrap_or("")
+                    // remove file uri and filename from path
+                    .to_string()[("file://".len())..(path_str.len() - self.filename.len())]
                     .replace(home_dir().unwrap().to_str().unwrap(), "~")
             ),
-            &self.output,
-        )
+            &self.output
+        );
+        self.path_added = true;
     }
 }
 
