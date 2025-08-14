@@ -55,7 +55,13 @@ fn store_files(recently_used: RecentlyUsed, show_all_paths: bool, excluded: &Vec
                 continue;
             }
             // store path and filename to variables
-            let path: PathBuf = (Url::parse(&bookmark.href)?).to_file_path().unwrap();
+            let url = Url::parse(&bookmark.href)?;
+            let path: PathBuf = match url.to_file_path() {
+                Err(_) => {
+                    continue;
+                },
+                Ok(x) => x
+            };
             let fname: &str;
             let fname_try = path.file_name();
             match fname_try {
