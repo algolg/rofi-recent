@@ -30,7 +30,13 @@ impl File {
     }
 }
 
-pub fn format_output(icon: &str, absolute_path: &str, app_name: &str, app_exec: &str, mimetype: &str) -> String {
+pub fn format_output(
+    icon: &str,
+    absolute_path: &str,
+    app_name: &str,
+    app_exec: &str,
+    mimetype: &str,
+) -> String {
     format!(
         "\0icon\x1f{}\x1finfo\x1f{}\x1fmeta\x1f{}",
         // get icon name by replacing forward slashes in type with dashes
@@ -43,10 +49,5 @@ pub fn format_output(icon: &str, absolute_path: &str, app_name: &str, app_exec: 
 }
 
 pub fn format_output_tail(app_name: &str, app_exec: &str, mimetype: &str) -> String {
-    format!(
-        " {} {} {}",
-        app_name,
-        app_exec,
-        mimetype
-    )
+    format!(" {} {} {}", app_name, app_exec, mimetype)
 }

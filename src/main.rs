@@ -6,14 +6,13 @@ use std::process::Command;
 use clap::Parser;
 use fork::{daemon, Fork};
 use itertools::Itertools;
+use recently_used_xbel::RecentlyUsed;
 use url::Url;
 
 use crate::file::{format_output, format_output_tail, File};
-use crate::recently_used_xbel::RecentlyUsed;
 
 mod arguments;
 mod file;
-mod recently_used_xbel;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = arguments::Arguments::parse();
@@ -41,13 +40,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn store_files(recently_used: RecentlyUsed, show_all_paths: bool, excluded: &Vec<&str>) -> Result<HashMap<String, Vec<File>>, Box<dyn std::error::Error>> {
+fn store_files(
+    recently_used: RecentlyUsed,
+    show_all_paths: bool,
+    excluded: &Vec<&str>,
+) -> Result<HashMap<String, Vec<File>>, Box<dyn std::error::Error>> {
     let mut files = HashMap::<String, Vec<File>>::new();
     // let get_app = Regex::new(r"[a-zA-Z/]+").unwrap();
     for bookmark in recently_used.bookmarks {
         // application type, which is used for the icon and (sometimes) the program name
-        let mimetype: String = bookmark.info.metadata.mime_type.mimetype;
-        for app in bookmark.info.metadata.app_parent.apps.iter() {
+        let info = match bookmark.info {
+            None => continue,
+            Some(x) => x,
+        };
+        let mimetype: String = match info.metadata.mime_type {
+            None => "application/x-generic".to_string(),
+            Some(x) => x.mime_type,
+        };
+        for app in info.metadata.applications.applications.iter() {
             // stores the command without parameters
             let cmd: &str = &app.exec[1..].split(" ").next().unwrap();
             // if cmd is one of the excluded programs, then skip this file
@@ -59,19 +69,13 @@ fn store_files(recently_used: RecentlyUsed, show_all_paths: bool, excluded: &Vec
             let path: PathBuf = match url.to_file_path() {
                 Err(_) => {
                     continue;
-                },
-                Ok(x) => x
+                }
+                Ok(x) => x,
             };
-            let fname: &str;
-            let fname_try = path.file_name();
-            match fname_try {
-                None => {
-                    fname = "/";
-                }
-                Some(value) => {
-                    fname = value.to_str().expect("/");
-                }
-            }
+            let fname: &str = match path.file_name() {
+                None => "/",
+                Some(value) => value.to_str().expect("/"),
+            };
             // create a boolean to prevent duplicate entries
             let mut exists = false;
             // adds the command as a key to the HashMap if it doesn't already exist
@@ -80,8 +84,10 @@ fn store_files(recently_used: RecentlyUsed, show_all_paths: bool, excluded: &Vec
             } else {
                 for v in files.get_mut(cmd).unwrap() {
                     if path.eq(&v.path) {
-                        v.output += &format_output_tail(&app.name, &app.exec,
-                            &mimetype.split("application/x-").nth(1).unwrap_or("")
+                        v.output += &format_output_tail(
+                            &app.name,
+                            &app.exec,
+                            &mimetype.split("application/x-").nth(1).unwrap_or(""),
                         );
                         exists = true;
                         break;
@@ -96,8 +102,13 @@ fn store_files(recently_used: RecentlyUsed, show_all_paths: bool, excluded: &Vec
                 path: path.to_path_buf(),
                 path_added: false,
                 filename: fname.to_string(),
-                output: format_output(&mimetype.replace("/", "-"), &path.to_str().unwrap(),
-                                      &app.name, &app.exec, mimetype.split("application/x-").nth(1).unwrap_or("")),
+                output: format_output(
+                    &mimetype.replace("/", "-"),
+                    &path.to_str().unwrap(),
+                    &app.name,
+                    &app.exec,
+                    mimetype.split("application/x-").nth(1).unwrap_or(""),
+                ),
                 date: bookmark.modified.to_string(),
             };
             // add paths to all outputs if flag was given

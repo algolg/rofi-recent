@@ -1,20 +1,22 @@
 [package]
 name = "rofi-recent"
-version = "0.2.5"
-edition = "2021"
+version = "0.2.6"
+edition = "2024"
 description = "A rofi script that provides quick access to recently-used files"
 repository = "https://github.com/algolg/rofi-recent"
 license = "MIT"
 
 [dependencies]
 clap = { version = "4.5.2", features = ["derive"] }
-dirs = "4.0.0"
-fork = "0.1.19"
-itertools = "0.11.0"
-serde = { version = "1.0.136", features = ["derive"] }
-serde-xml-rs = "0.5.1"
-thiserror = "1.0.30"
-url = "2.5.0"
+dirs = "6.0.0"
+fork = "0.2.0"
+itertools = "0.14.0"
+quick-xml = { version = "0.38.1", features = ["overlapped-lists", "serialize", "serde-types"]}
+recently-used-xbel = "1.1.0"
+serde = { version = "1.0.219", features = ["derive"] }
+serde-xml-rs = "0.8.1"
+thiserror = "2.0.15"
+url = "2.5.4"
 
 [profile.release]
 strip = true
